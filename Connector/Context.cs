@@ -1,14 +1,28 @@
+using Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Connector;
-using Entities;
 
-public class Context(DbContextOptions<Context> options) : DbContext(options)
+public class Context : DbContext
 {
+    private static Context? _context;
     public DbSet<Student> Students { get; set; }
     public DbSet<Subject> Subjects { get; set; }
     public DbSet<Exam> Exams { get; set; }
 
+    public static Context GetInstance()
+    {
+        if (_context == null)
+        {
+            throw new NullReferenceException("Context is null");
+        }
+        return _context;
+    }
+
+    private Context(DbContextOptions<Context> options) : base(options)
+    {
+    }
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Student>().ToTable("student");
@@ -30,12 +44,14 @@ public class Context(DbContextOptions<Context> options) : DbContext(options)
             .HasForeignKey(e => e.SubjectId)
             .OnDelete(DeleteBehavior.Cascade);
     }
-
-    public static Context Create(string connectionString)
+    
+    public static Context CreateContext()
     {
         var options = new DbContextOptionsBuilder<Context>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(ConnectionFactory.GetInstance().CreateConnectionString())
             .Options;
-        return new Context(options);
+        _context = new Context(options);
+        return _context;
     }
+    
 }
